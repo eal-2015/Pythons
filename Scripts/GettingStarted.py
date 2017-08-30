@@ -3,7 +3,6 @@ from pymongo import MongoClient
 import pymongo
 from bson import ObjectId, json_util
 from flask import Flask
-import pandas as pd
 app = Flask(__name__)
 '''
 from collections import OrderedDict
@@ -15,27 +14,39 @@ import bson.son
 
 client = MongoClient("10.190.80.25")
 db = client.Trafik_DB
-col = db.Stations
 
 @app.route("/MeasurementsBetweenDates/<start>/<end>/<lane>/<cartype>/<stationname>")
 def getMeasurementsBetweenDates(start, end, lane, cartype, stationname):
-    connectToMeasurements()
-    found = []
-    for x in col.find({'$text': {'$search': stationname}}):
-        found.append(x)
-    return pd.read_json(found) #JSONEncoder().encode(found)
+    col = connectToMeasurements()
+    found = {}
+    i = 0
+    #fromdb = col.find({'$text': {'$search': stationname}} and {'$carType':  {'$search': cartype}})
+    query = {'stationName': stationname}
+    #query['lane'] = lane
+    #query['carType'] = cartype
+    #query = [{'stationName': stationname}]
+    #query.append({'lane': lane})
+    #query.append({'carType': cartype})
+    fromdb = col.find(query)
+    for x in fromdb:
+        found[i] = x
+        i = i+1
+    return json.dumps(found, default=json_util.default)
 
 @app.route("/GetStation/<name>")
 def getOneStation(name):
-    connectToStation()
-    found = []
-    for x in col.find({'$text': {'$search': name}}):
-        found.append(x)
-    return JSONEncoder().encode(found)
+    col = connectToStation()
+    found = {}
+    i = 0
+    fromdb = col.find({'$text': {'$search': name}})
+    for x in fromdb:
+        found[i] = x
+        i = i+1
+    return json.dumps(found, default=json_util.default)
 
 @app.route("/GetAllStations")
 def getAllStations():
-    connectToStation()
+    col = connectToStation()
     found = col.find({})
     tosend = {}
     i = 0
@@ -54,14 +65,14 @@ class JSONEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 def connectToStation():
-    client = MongoClient()
+    client = MongoClient("10.190.80.25")
     db = client.Trafik_DB
-    col = db.Stations
+    return db.Stations
 
 def connectToMeasurements():
-    client = MongoClient()
+    client = MongoClient("10.190.80.25")
     db = client.Trafik_DB
-    col = db.Measurements
+    return db.Measurements
 
 # for keeping the flask api running
 if __name__ == '__main__':
