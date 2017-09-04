@@ -5,43 +5,76 @@ import datetime
 from bson import ObjectId, json_util
 from flask import Flask
 import pandas as pd
+import time
 app = Flask(__name__)
-'''
-from collections import OrderedDict
-from pymongo import MongoClient
-import bson
-import bson.regex
-import bson.son
-'''
 
 mongoIp = "10.190.80.25"
 
-@app.route("/MeasurementsBetweenDates/<start>/<end>/<lane>/<cartype>/<name>")
-def getMeasurementsBetweenDates(start, end, lane, cartype, name):
-    col = connectToMeasurements()
+@app.route("/Counts")
+def getCountForEachStation():
+    #'''
+    start = time.time()
+    col = connectToStation()
     found = {}
-    i = 0
+    data = col.find({})
+    for x in data:
+        found[x['name']] = 0
+    col = connectToMeasurements()
+    for x in found:
+        print("Checking: " + x)
+        go = time.time()
+        found[x] = col.find({'$text': {"$search": "\""+x+"\""}}).count()
+        #found[x] = col.find({'stationName': {"$regex": x}}).count()
+        print("Took: " + str(time.time() - go))
+        print("Found: " + str(found[x]))
+    end = time.time()
+    res1 = end - start
+    print("text:")
+    print(res1)
+    #'''
+    '''
+    start = time.time()
+    col = connectToStation()
+    found = {}
+    data = col.find({})
+    for x in data:
+        found[x['name']] = 0
+    col = connectToMeasurements()
+    for x in found:
+        print("Checking: " + x)
+        go = time.time()
+        #found[x] = col.find({'$text': {"$search": x}}).count()
+        found[x] = col.find({'stationName': {"$regex": x}}).count()
+        print("Took: " + str(time.time() - go))
+        print("Found: " + str(found[x]))
+    end = time.time()
+    #'''
+    #print("text:")
+    #print(res1)
+    print("total:")
+    print(end - start)
+
+    return "Done"
+    #return json.dumps(found, default=json_util.default)
+
+@app.route("/MeasurementsBetweenDates/<start>/<end>/<name>") # from, to, name, speed, cartype, lane?
+@app.route("/MeasurementsBetweenDates/<start>/<end>/<name>/<lane>/<cartype>")
+
+def getMeasurementsBetweenDates(start, end, name, lane=None, cartype=None):
+    col = connectToMeasurements()
     #fromdb = col.find({'$text': {'$search': name}}).limit(15) #<-- slow?
     #fromdb = col.find({'stationName': {"$regex": name}}).limit(15) #<-- fast?
     query = []
+    if lane != None:
+        query.append({'lane': {'$eq': int(lane)}})
+    if cartype != None:
+        query.append({'carType': {'$eq': int(cartype)}})
     query.append({'stationName': {'$regex': name}})
-    query.append({'lane': {'$eq': int(lane)}})
-    query.append({'carType': {'$eq': int(cartype)}})
-    #query.append({'dateTime': {'$gte': datetime.datetime(2017, 4, 30, 21, 35, 17)}})
-    #query.append({'dateTime': {'$lte': datetime.datetime(2017, 4, 30, 22, 35, 17)}})
-    #splitdaytime = str(start).split(" ")
-    #splitday = splitdaytime[0].split("-")
-    #splittime = splitdaytime[1].split(":")
-    #datefrom = datetime.datetime(int(splitday[0]), int(splitday[1]), int(splitday[2]), int(splittime[0]), int(splittime[1]), int(splittime[2]))
-    #query.append({'dateTime': {'$gte': datefrom}})
     query.append({'dateTime': {'$gte': datetime.datetime.strptime(start, '%Y-%m-%d %H:%M:%S')}})
-    query.append({'dateTime': {'$lte': datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S')}})    
-    #splitdaytime = str(end).split(" ")
-    #splitday = splitdaytime[0].split("-")
-    #splittime = splitdaytime[1].split(":")
-    #dateto = datetime.datetime(int(splitday[0]), int(splitday[1]), int(splitday[2]), int(splittime[0]), int(splittime[1]), int(splittime[2]))
-    #query.append({'dateTime': {'$lte': dateto}})
+    query.append({'dateTime': {'$lte': datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S')}})
     fromdb = col.find({"$and": query})
+    found = {}
+    i = 0
     for x in fromdb:
         found[i] = x
         found[i]['dateTime'] = str(x['dateTime'])
@@ -50,6 +83,7 @@ def getMeasurementsBetweenDates(start, end, lane, cartype, name):
 
     res = json.dumps(found, default=json_util.default)
     # Pandas efterbehandling af data
+    '''
     data = pd.read_json(res)
     data = data.transpose()
     print(data.columns)
@@ -57,6 +91,7 @@ def getMeasurementsBetweenDates(start, end, lane, cartype, name):
     print(data.dtypes)
     print(data.columns)
     print(data.speed.count())
+    '''
     return res
     #return json.dumps(found, default=json_util.default)
 
@@ -84,6 +119,7 @@ def getAllStations():
 
 # Helping methods for fixing ObjectId and changing collection in DB
 
+# not needed?
 # for fixing ObjectId when finding item in database
 class JSONEncoder(json.JSONEncoder):
     def default(self, o):
