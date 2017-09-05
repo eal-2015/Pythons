@@ -120,10 +120,13 @@ def getAverageSpdBetweenDates(start, end, areaCode, lane=None, cartype=None):
     From = datetime(int(start[0:4]), int(start[5:7]), int(start[8:10]), int(start[11:13]), int(start[14:16]), int(start[17:19]))
     To = datetime(int(end[0:4]), int(end[5:7]), int(end[8:10]), int(end[11:13]), int(end[14:16]), int(end[17:19]))
     pipeline = [
-            {"$match": {"dateTime" :{"$gte":From, "$lt":To}}}   #, "areaCode":{ "$eq":areaCode} 
-            #,{"$group": {"_id":"$carType","avgValue": {"$avg": "$speed"}}}
-               ,{"$group": {"_id":"$areaCode","avgValue": {"$avg": "$speed"}}}
+            {"$match": {
+                "$and": [
+                {"dateTime" :{"$gte":From, "$lt":To}},  {"areaCode":{"$eq":int(areaCode)}}
+                ]}} ,{"$group": {"_id":"$areaCode","avgValue": {"$avg": "$speed"}}}
+
     ]
+
     return json.dumps(list(col.aggregate(pipeline)), default=json_util.default)
 
 
