@@ -3,6 +3,8 @@ from pymongo import MongoClient
 from bson import ObjectId
 from flask import Flask, jsonify
 app = Flask(__name__)
+import pandas as pd
+
 
 client = MongoClient()
 db = client.Trafik_DB
@@ -35,6 +37,8 @@ def insertStation(name, areacode):
     print(col.find_one({"_id": objid}))
     return "Ok"
 
+
+
 @app.route("/GetAllStations")
 def getAllStations():
     connectToStation()
@@ -57,6 +61,8 @@ def getStation(name):
 @app.route("/")
 def hello():
     return "Hello World!"
+
+
 
 if __name__ == '__main__':
     app.run()
